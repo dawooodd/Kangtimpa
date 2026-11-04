@@ -9,10 +9,14 @@ import {
   HelpCircle, 
   Sparkles,
   Layers,
-  Check
+  Check,
+  Cpu,
+  Palette
 } from 'lucide-react';
 
 interface HeaderProps {
+  appMode: 'studio' | 'lab';
+  onSetAppMode: (mode: 'studio' | 'lab') => void;
   onOpenTemplates: () => void;
   onOpenExport: () => void;
   onOpenShortcuts: () => void;
@@ -28,6 +32,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  appMode,
+  onSetAppMode,
   onOpenTemplates,
   onOpenExport,
   onOpenShortcuts,
@@ -56,109 +62,138 @@ export const Header: React.FC<HeaderProps> = ({
               Kangtimpa
             </h1>
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              STUDIO
+              {appMode === 'studio' ? 'STUDIO TIMPA' : 'LAB FORENSIK ML'}
             </span>
           </div>
           <p className="text-[11px] text-zinc-400 -mt-0.5 hidden sm:block">
-            Meme Text Replacement & Image Overlay Editor
+            Meme Text Replacement & Forensik Detektor AI
           </p>
         </div>
       </div>
 
-      {/* Center Actions: Undo / Redo & Template Picker */}
-      <div className="flex items-center gap-1.5">
+      {/* Mode Switcher Pill */}
+      <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800">
         <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Urungkan (Undo) [Ctrl+Z]"
-          className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
-            canUndo
-              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800'
-              : 'text-zinc-600 cursor-not-allowed'
+          onClick={() => onSetAppMode('studio')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            appMode === 'studio'
+              ? 'bg-amber-500 text-zinc-950 shadow-sm'
+              : 'text-zinc-400 hover:text-white'
           }`}
         >
-          <RotateCcw className="w-4 h-4" />
+          <Palette className="w-3.5 h-3.5" />
+          <span>Studio Timpa</span>
         </button>
 
         <button
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Ulangi (Redo) [Ctrl+Y]"
-          className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
-            canRedo
-              ? 'text-zinc-300 hover:text-white hover:bg-zinc-800'
-              : 'text-zinc-600 cursor-not-allowed'
+          onClick={() => onSetAppMode('lab')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            appMode === 'lab'
+              ? 'bg-emerald-500 text-zinc-950 shadow-sm'
+              : 'text-zinc-400 hover:text-white'
           }`}
         >
-          <RotateCw className="w-4 h-4" />
-        </button>
-
-        <div className="h-5 w-px bg-zinc-800 mx-1 hidden sm:block" />
-
-        <button
-          onClick={onOpenTemplates}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-200 hover:text-white text-xs font-semibold border border-zinc-700/70 transition-all shadow-sm"
-        >
-          <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
-          <span className="hidden md:inline">Pilih</span> Template
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={onUploadImage}
-        />
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-200 hover:text-white text-xs font-semibold border border-zinc-700/70 transition-all shadow-sm"
-          title="Upload gambar dari komputer"
-        >
-          <Upload className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden md:inline">Ganti</span> Gambar
-        </button>
-
-        <button
-          onClick={onOpenLayers}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700/70 transition-all relative"
-          title="Daftar Layer"
-        >
-          <Layers className="w-3.5 h-3.5 text-sky-400" />
-          <span className="text-[11px] font-bold px-1.5 py-0.2 bg-zinc-700 rounded-full text-zinc-200">
-            {layersCount}
-          </span>
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Lab Forensik AI</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
         </button>
       </div>
 
-      {/* Right Actions: Quick Copy, Export & Shortcuts */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onQuickCopy}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-medium border border-zinc-700 transition-all"
-          title="Salin hasil langsung ke Clipboard (Ctrl+C)"
-        >
-          {isCopied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400 font-bold hidden sm:inline">Disalin!</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="hidden sm:inline">Salin</span>
-            </>
-          )}
-        </button>
+      {/* Studio-specific or Universal Actions */}
+      <div className="flex items-center gap-1.5">
+        {appMode === 'studio' && (
+          <>
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Urungkan (Undo) [Ctrl+Z]"
+              className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+                canUndo
+                  ? 'text-zinc-300 hover:text-white hover:bg-zinc-800'
+                  : 'text-zinc-600 cursor-not-allowed'
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
 
-        <button
-          onClick={onOpenExport}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 text-xs font-bold shadow-md shadow-amber-500/20 transition-all"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Unduh</span>
-        </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Ulangi (Redo) [Ctrl+Y]"
+              className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+                canRedo
+                  ? 'text-zinc-300 hover:text-white hover:bg-zinc-800'
+                  : 'text-zinc-600 cursor-not-allowed'
+              }`}
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+
+            <div className="h-5 w-px bg-zinc-800 mx-1 hidden sm:block" />
+
+            <button
+              onClick={onOpenTemplates}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-200 hover:text-white text-xs font-semibold border border-zinc-700/70 transition-all shadow-sm"
+            >
+              <LayoutTemplate className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">Pilih</span> Template
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onUploadImage}
+            />
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-200 hover:text-white text-xs font-semibold border border-zinc-700/70 transition-all shadow-sm"
+              title="Upload gambar dari komputer"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden md:inline">Ganti</span> Gambar
+            </button>
+
+            <button
+              onClick={onOpenLayers}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800/90 hover:bg-zinc-700/90 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700/70 transition-all relative"
+              title="Daftar Layer"
+            >
+              <Layers className="w-3.5 h-3.5 text-sky-400" />
+              <span className="text-[11px] font-bold px-1.5 py-0.2 bg-zinc-700 rounded-full text-zinc-200">
+                {layersCount}
+              </span>
+            </button>
+
+            <button
+              onClick={onQuickCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-medium border border-zinc-700 transition-all"
+              title="Salin hasil langsung ke Clipboard (Ctrl+C)"
+            >
+              {isCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 font-bold hidden sm:inline">Disalin!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="hidden sm:inline">Salin</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={onOpenExport}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 text-xs font-bold shadow-md shadow-amber-500/20 transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Unduh</span>
+            </button>
+          </>
+        )}
 
         <button
           onClick={onOpenShortcuts}

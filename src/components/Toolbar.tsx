@@ -9,7 +9,8 @@ import {
   ZoomIn, 
   ZoomOut, 
   Maximize2,
-  Wand2
+  Wand2,
+  Cpu
 } from 'lucide-react';
 import { ToolMode } from '../types';
 
@@ -25,6 +26,7 @@ interface ToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
+  onOpenLab?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -39,6 +41,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onZoomIn,
   onZoomOut,
   onResetZoom,
+  onOpenLab,
 }) => {
   const [showFilterMenu, setShowFilterMenu] = React.useState(false);
 
@@ -130,6 +133,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </div>
 
       <div className="w-8 h-px bg-zinc-800 my-1" />
+
+      {/* Lab ML Quick Trigger */}
+      {onOpenLab && (
+        <button
+          onClick={onOpenLab}
+          className="w-11 h-11 rounded-xl flex flex-col items-center justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all"
+          title="Uji Forensik ML (Deteksi Asli vs Timpaan)"
+        >
+          <Cpu className="w-5 h-5" />
+          <span className="text-[9px] mt-0.5 font-bold">Lab ML</span>
+        </button>
+      )}
 
       {/* Meme Filters Toggle */}
       <div className="relative">

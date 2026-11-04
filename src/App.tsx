@@ -9,6 +9,7 @@ import { TemplateModal } from './components/TemplateModal';
 import { ExportModal } from './components/ExportModal';
 import { LayerListModal } from './components/LayerListModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { DataEngineeringLab } from './components/DataEngineeringLab';
 import { MEME_TEMPLATES } from './utils/templates';
 import { 
   EditorLayer, 
@@ -22,6 +23,9 @@ import {
 import { renderLayer, applyCanvasFilter } from './utils/canvasRenderer';
 
 export const App: React.FC = () => {
+  // App Mode: 'studio' (Meme Editor) vs 'lab' (Data Engineering & ML Forensic Lab)
+  const [appMode, setAppMode] = useState<'studio' | 'lab'>('studio');
+
   // Current Template or Uploaded Image
   const [currentTemplate, setCurrentTemplate] = useState<MemeTemplate>(MEME_TEMPLATES[0]);
   const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
@@ -285,7 +289,6 @@ export const App: React.FC = () => {
         setUploadedImage(img);
         setCanvasWidth(img.width);
         setCanvasHeight(img.height);
-        // Fit zoom to comfortable view
         const targetZoom = Math.min(1, Math.min(900 / img.width, 600 / img.height));
         setZoom(Math.max(0.2, targetZoom));
       };
@@ -332,6 +335,31 @@ export const App: React.FC = () => {
     [canvasWidth, canvasHeight, uploadedImage, currentTemplate, layers, currentFilter]
   );
 
+  const getStudioRenderedCanvas = useCallback((): HTMLCanvasElement | null => {
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvasWidth;
+    exportCanvas.height = canvasHeight;
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return null;
+
+    if (uploadedImage) {
+      ctx.drawImage(uploadedImage, 0, 0, canvasWidth, canvasHeight);
+    } else if (currentTemplate) {
+      currentTemplate.generateBaseCanvas(ctx, canvasWidth, canvasHeight);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
+
+    layers.forEach((l) => renderLayer(ctx, l, false));
+
+    if (currentFilter !== 'none') {
+      applyCanvasFilter(ctx, canvasWidth, canvasHeight, currentFilter);
+    }
+
+    return exportCanvas;
+  }, [canvasWidth, canvasHeight, uploadedImage, currentTemplate, layers, currentFilter]);
+
   const handleQuickCopy = async () => {
     const url = generateExportDataUrl('image/png', 1.0);
     try {
@@ -350,12 +378,10 @@ export const App: React.FC = () => {
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing inside input or textarea
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
         return;
       }
 
-      // Delete
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedLayerId) {
           e.preventDefault();
@@ -363,7 +389,6 @@ export const App: React.FC = () => {
         }
       }
 
-      // Undo / Redo
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -376,19 +401,16 @@ export const App: React.FC = () => {
         handleRedo();
       }
 
-      // Deselect
       if (e.key === 'Escape') {
         setSelectedLayerId(null);
         setToolMode('select');
       }
 
-      // Tool switches
       if (e.key.toLowerCase() === 'v') setToolMode('select');
       if (e.key.toLowerCase() === 't') handleAddText();
       if (e.key.toLowerCase() === 'p') handleAddPatch();
       if (e.key.toLowerCase() === 'b') setToolMode('brush');
 
-      // Arrow Nudges
       if (selectedLayerId && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
         const step = e.shiftKey ? 10 : 1;
@@ -411,12 +433,27 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedLayerId, layers, historyIndex, history]);
 
+  // Handle transfer from ML Lab to Studio
+  const handleSendFromLabToStudio = (img: HTMLImageElement) => {
+    setUploadedImage(img);
+    setCanvasWidth(img.width);
+    setCanvasHeight(img.height);
+    // Clear old layers since user is now editing the inpainted/analyzed base
+    setLayers([]);
+    setSelectedLayerId(null);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    setAppMode('studio');
+  };
+
   const activeLayer = layers.find((l) => l.id === selectedLayerId);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans">
       {/* Header */}
       <Header
+        appMode={appMode}
+        onSetAppMode={setAppMode}
         onOpenTemplates={() => setIsTemplateModalOpen(true)}
         onOpenExport={() => setIsExportModalOpen(true)}
         onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
@@ -432,78 +469,88 @@ export const App: React.FC = () => {
       />
 
       {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Toolbar */}
-        <Toolbar
-          currentMode={toolMode}
-          onSetMode={setToolMode}
-          onAddText={handleAddText}
-          onAddPatch={handleAddPatch}
-          onAddSticker={handleAddSticker}
-          currentFilter={currentFilter}
-          onSetFilter={setCurrentFilter}
-          zoom={zoom}
-          onZoomIn={() => setZoom((z) => Math.min(2.5, z + 0.15))}
-          onZoomOut={() => setZoom((z) => Math.max(0.2, z - 0.15))}
-          onResetZoom={() => setZoom(0.85)}
+      {appMode === 'studio' ? (
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Left Toolbar */}
+          <Toolbar
+            currentMode={toolMode}
+            onSetMode={setToolMode}
+            onAddText={handleAddText}
+            onAddPatch={handleAddPatch}
+            onAddSticker={handleAddSticker}
+            currentFilter={currentFilter}
+            onSetFilter={setCurrentFilter}
+            zoom={zoom}
+            onZoomIn={() => setZoom((z) => Math.min(2.5, z + 0.15))}
+            onZoomOut={() => setZoom((z) => Math.max(0.2, z - 0.15))}
+            onResetZoom={() => setZoom(0.85)}
+            onOpenLab={() => setAppMode('lab')}
+          />
+
+          {/* Central Canvas Workspace */}
+          <CanvasWorkspace
+            currentTemplate={currentTemplate}
+            uploadedImage={uploadedImage}
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            layers={layers}
+            selectedLayerId={selectedLayerId}
+            onSelectLayer={setSelectedLayerId}
+            onUpdateLayer={handleUpdateLayer}
+            onAddBrushStroke={handleAddBrushStroke}
+            toolMode={toolMode}
+            onSetToolMode={setToolMode}
+            eyedropperTarget={eyedropperTarget}
+            onColorPicked={handleColorPicked}
+            currentFilter={currentFilter}
+            zoom={zoom}
+            onPasteImage={handleLoadImageFile}
+          />
+
+          {/* Right Properties Panel based on active layer */}
+          {activeLayer && activeLayer.type === 'text' && (
+            <TextPropertiesPanel
+              layer={activeLayer as TextLayer}
+              onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
+              onDelete={() => handleDeleteLayer(activeLayer.id)}
+              onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
+              onBringForward={() => handleMoveLayerUp(activeLayer.id)}
+              onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
+              onTriggerEyedropper={handleTriggerEyedropper}
+            />
+          )}
+
+          {activeLayer && activeLayer.type === 'patch' && (
+            <PatchPropertiesPanel
+              layer={activeLayer as PatchLayer}
+              onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
+              onDelete={() => handleDeleteLayer(activeLayer.id)}
+              onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
+              onBringForward={() => handleMoveLayerUp(activeLayer.id)}
+              onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
+              onTriggerEyedropper={handleTriggerEyedropper}
+            />
+          )}
+
+          {activeLayer && activeLayer.type === 'sticker' && (
+            <StickerPropertiesPanel
+              layer={activeLayer as StickerLayer}
+              onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
+              onDelete={() => handleDeleteLayer(activeLayer.id)}
+              onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
+              onBringForward={() => handleMoveLayerUp(activeLayer.id)}
+              onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
+            />
+          )}
+        </div>
+      ) : (
+        /* Data Engineering & ML Forensic Lab */
+        <DataEngineeringLab
+          currentStudioCanvas={getStudioRenderedCanvas()}
+          onSendToStudio={handleSendFromLabToStudio}
+          onClose={() => setAppMode('studio')}
         />
-
-        {/* Central Canvas Workspace */}
-        <CanvasWorkspace
-          currentTemplate={currentTemplate}
-          uploadedImage={uploadedImage}
-          canvasWidth={canvasWidth}
-          canvasHeight={canvasHeight}
-          layers={layers}
-          selectedLayerId={selectedLayerId}
-          onSelectLayer={setSelectedLayerId}
-          onUpdateLayer={handleUpdateLayer}
-          onAddBrushStroke={handleAddBrushStroke}
-          toolMode={toolMode}
-          onSetToolMode={setToolMode}
-          eyedropperTarget={eyedropperTarget}
-          onColorPicked={handleColorPicked}
-          currentFilter={currentFilter}
-          zoom={zoom}
-          onPasteImage={handleLoadImageFile}
-        />
-
-        {/* Right Properties Panel based on active layer */}
-        {activeLayer && activeLayer.type === 'text' && (
-          <TextPropertiesPanel
-            layer={activeLayer as TextLayer}
-            onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
-            onDelete={() => handleDeleteLayer(activeLayer.id)}
-            onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
-            onBringForward={() => handleMoveLayerUp(activeLayer.id)}
-            onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
-            onTriggerEyedropper={handleTriggerEyedropper}
-          />
-        )}
-
-        {activeLayer && activeLayer.type === 'patch' && (
-          <PatchPropertiesPanel
-            layer={activeLayer as PatchLayer}
-            onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
-            onDelete={() => handleDeleteLayer(activeLayer.id)}
-            onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
-            onBringForward={() => handleMoveLayerUp(activeLayer.id)}
-            onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
-            onTriggerEyedropper={handleTriggerEyedropper}
-          />
-        )}
-
-        {activeLayer && activeLayer.type === 'sticker' && (
-          <StickerPropertiesPanel
-            layer={activeLayer as StickerLayer}
-            onChange={(upd) => handleUpdateLayer(activeLayer.id, upd)}
-            onDelete={() => handleDeleteLayer(activeLayer.id)}
-            onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
-            onBringForward={() => handleMoveLayerUp(activeLayer.id)}
-            onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
-          />
-        )}
-      </div>
+      )}
 
       {/* Modals */}
       <TemplateModal
