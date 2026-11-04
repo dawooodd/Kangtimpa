@@ -85,6 +85,7 @@ export interface MemeTemplate {
   category: 'Indo Meme' | 'Classic' | 'News / Chat' | 'Borders';
   aspectRatio: string;
   previewColor: string;
+  imageSrc?: string;
   initialLayers: Partial<EditorLayer>[];
   generateBaseCanvas: (ctx: CanvasRenderingContext2D, width: number, height: number) => void;
 }

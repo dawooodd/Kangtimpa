@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Copy, Pipette, Square, Circle } from 'lucide-react';
+import { Trash2, Copy, Pipette, Square, Circle, X } from 'lucide-react';
 import { PatchLayer } from '../types';
 
 interface PatchPropertiesPanelProps {
@@ -10,19 +10,16 @@ interface PatchPropertiesPanelProps {
   onBringForward: () => void;
   onSendBackward: () => void;
   onTriggerEyedropper: (targetProp: 'fillColor' | 'borderColor') => void;
+  onClose?: () => void;
 }
 
 const PRESET_PATCH_COLORS = [
-  '#ffffff',
-  '#000000',
-  '#f8fafc',
-  '#0b141a', // WhatsApp Dark
-  '#202c33', // WhatsApp Bubble Dark
-  '#e9edef', // WhatsApp light text
-  '#fef08a', // Warung yellow
-  '#dc2626', // News red
-  '#2563eb', // Blue
-  '#005c4b', // WhatsApp outgoing bubble
+  '#facc15', // Gold / Yellow
+  '#ffffff', // White
+  '#09090b', // Deep Dark
+  '#18181b', // Charcoal
+  '#dc2626', // News Red
+  '#005c4b', // WhatsApp Dark Green
 ];
 
 export const PatchPropertiesPanel: React.FC<PatchPropertiesPanelProps> = ({
@@ -33,104 +30,109 @@ export const PatchPropertiesPanel: React.FC<PatchPropertiesPanelProps> = ({
   onBringForward,
   onSendBackward,
   onTriggerEyedropper,
+  onClose,
 }) => {
   return (
-    <div className="w-80 bg-zinc-900 border-l border-zinc-800 p-4 overflow-y-auto max-h-screen text-xs flex flex-col gap-4 select-none shrink-0">
+    <div className="fixed bottom-14 left-0 right-0 max-h-[58vh] z-20 md:static md:w-80 md:max-h-screen bg-zinc-900 border-t md:border-t-0 md:border-l border-zinc-800 p-4 overflow-y-auto text-xs flex flex-col gap-3.5 select-none shrink-0 shadow-2xl md:shadow-none">
+      {/* Mobile Drawer Grab Bar */}
+      <div className="md:hidden flex justify-center -mt-2 pb-1">
+        <div className="w-12 h-1 rounded-full bg-zinc-700" />
+      </div>
+
       <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-orange-500" />
-          <h2 className="font-bold text-zinc-100 text-sm">Pengaturan Kotak Timpa</h2>
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          <h2 className="font-bold text-zinc-100 text-sm">Kotak Penutup (Patch)</h2>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={onDuplicate}
             className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
-            title="Duplikat Layer"
+            title="Duplikat"
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded hover:bg-red-500/20 text-zinc-400 hover:text-red-400"
-            title="Hapus Layer (Del)"
+            className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white"
+            title="Hapus"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white md:hidden"
+              title="Tutup"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Shape Selector */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[11px] font-semibold text-zinc-400">Bentuk Penutup</label>
-        <div className="grid grid-cols-3 gap-1.5 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
-          <button
-            onClick={() => onChange({ shape: 'rect' })}
-            className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
-              layer.shape === 'rect' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Square className="w-3.5 h-3.5" /> Persegi
-          </button>
-          <button
-            onClick={() => onChange({ shape: 'rounded' })}
-            className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
-              layer.shape === 'rounded' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Square className="w-3.5 h-3.5 rounded" /> Membulat
-          </button>
-          <button
-            onClick={() => onChange({ shape: 'ellipse' })}
-            className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
-              layer.shape === 'ellipse' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            <Circle className="w-3.5 h-3.5" /> Elips
-          </button>
-        </div>
+      <div className="grid grid-cols-3 gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+        <button
+          onClick={() => onChange({ shape: 'rect' })}
+          className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
+            layer.shape === 'rect' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400'
+          }`}
+        >
+          <Square className="w-3.5 h-3.5" /> Persegi
+        </button>
+        <button
+          onClick={() => onChange({ shape: 'rounded' })}
+          className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
+            layer.shape === 'rounded' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400'
+          }`}
+        >
+          <Square className="w-3.5 h-3.5 rounded" /> Membulat
+        </button>
+        <button
+          onClick={() => onChange({ shape: 'ellipse' })}
+          className={`py-1.5 rounded flex items-center justify-center gap-1 text-[11px] ${
+            layer.shape === 'ellipse' ? 'bg-zinc-800 text-amber-400 font-bold' : 'text-zinc-400'
+          }`}
+        >
+          <Circle className="w-3.5 h-3.5" /> Elips
+        </button>
       </div>
 
       {/* Dimensions: Width and Height */}
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-zinc-400">Lebar (Width)</span>
-          <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1">
-            <input
-              type="number"
-              min={10}
-              max={2500}
-              value={layer.width}
-              onChange={(e) => onChange({ width: Math.max(10, Number(e.target.value)) })}
-              className="w-full bg-transparent text-zinc-100 text-xs focus:outline-none"
-            />
-            <span className="text-[10px] text-zinc-400">px</span>
-          </div>
+          <span className="text-[10px] text-zinc-400">Lebar (px)</span>
+          <input
+            type="number"
+            min={10}
+            max={2500}
+            value={layer.width}
+            onChange={(e) => onChange({ width: Math.max(10, Number(e.target.value)) })}
+            className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-zinc-100 text-xs focus:outline-none"
+          />
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-zinc-400">Tinggi (Height)</span>
-          <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1">
-            <input
-              type="number"
-              min={10}
-              max={2500}
-              value={layer.height}
-              onChange={(e) => onChange({ height: Math.max(10, Number(e.target.value)) })}
-              className="w-full bg-transparent text-zinc-100 text-xs focus:outline-none"
-            />
-            <span className="text-[10px] text-zinc-400">px</span>
-          </div>
+          <span className="text-[10px] text-zinc-400">Tinggi (px)</span>
+          <input
+            type="number"
+            min={10}
+            max={2500}
+            value={layer.height}
+            onChange={(e) => onChange({ height: Math.max(10, Number(e.target.value)) })}
+            className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-zinc-100 text-xs focus:outline-none"
+          />
         </div>
       </div>
 
       {/* Fill Color */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex justify-between items-center text-[11px] font-semibold text-zinc-400">
-          <span>Warna Penutup (Isian)</span>
+      <div className="flex flex-col gap-1">
+        <div className="flex justify-between items-center text-[10px] text-zinc-400">
+          <span>Warna Isian Penutup</span>
           <button
             onClick={() => onTriggerEyedropper('fillColor')}
-            className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold"
-            title="Ambil warna background langsung dari gambar"
+            className="flex items-center gap-1 text-[10px] text-amber-400 hover:underline font-semibold"
           >
             <Pipette className="w-3 h-3" /> Ambil Pipet
           </button>
@@ -140,14 +142,14 @@ export const PatchPropertiesPanel: React.FC<PatchPropertiesPanelProps> = ({
             type="color"
             value={layer.fillColor}
             onChange={(e) => onChange({ fillColor: e.target.value })}
-            className="w-9 h-8 rounded border border-zinc-700 bg-transparent cursor-pointer"
+            className="w-7 h-7 rounded border border-zinc-700 bg-transparent cursor-pointer shrink-0"
           />
-          <div className="flex items-center gap-1 flex-1 overflow-x-auto pb-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
             {PRESET_PATCH_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => onChange({ fillColor: c })}
-                className="w-5 h-5 rounded-full border border-zinc-600 shrink-0"
+                className="w-5 h-5 rounded-full border border-zinc-700 shrink-0"
                 style={{ backgroundColor: c }}
               />
             ))}
@@ -155,99 +157,35 @@ export const PatchPropertiesPanel: React.FC<PatchPropertiesPanelProps> = ({
         </div>
       </div>
 
-      {/* Border & Rounded Radius */}
-      {layer.shape === 'rounded' && (
-        <div className="flex flex-col gap-1">
-          <div className="flex justify-between text-[10px] text-zinc-400">
-            <span>Radius Sudut</span>
-            <span className="font-mono text-amber-400">{layer.borderRadius || 12}px</span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={80}
-            value={layer.borderRadius || 12}
-            onChange={(e) => onChange({ borderRadius: Number(e.target.value) })}
-            className="accent-amber-500 w-full"
-          />
-        </div>
-      )}
-
-      {/* Border Width & Color */}
-      <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-zinc-950/70 border border-zinc-800">
-        <div className="flex justify-between text-[11px] font-semibold text-zinc-300">
-          <span>Garis Tepi (Border)</span>
-          <span className="font-mono text-amber-400">{layer.borderWidth || 0}px</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={16}
-          value={layer.borderWidth || 0}
-          onChange={(e) => onChange({ borderWidth: Number(e.target.value) })}
-          className="accent-amber-500 w-full"
-        />
-        {layer.borderWidth > 0 && (
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-[10px] text-zinc-400">Warna Garis:</span>
-            <input
-              type="color"
-              value={layer.borderColor || '#000000'}
-              onChange={(e) => onChange({ borderColor: e.target.value })}
-              className="w-7 h-6 rounded border border-zinc-700 bg-transparent cursor-pointer"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Blur / Feather effect for blending with jpeg memes */}
-      <div className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-zinc-950/70 border border-zinc-800">
-        <div className="flex justify-between text-[11px] font-semibold text-zinc-300">
-          <span>Kelembutan Tepi (Blur Blend)</span>
+      {/* Blur Feathering for seamless blending with meme image */}
+      <div className="flex flex-col gap-1 p-2 rounded-lg bg-zinc-950 border border-zinc-800">
+        <div className="flex justify-between text-[10px] text-zinc-300 font-medium">
+          <span>Kehalusan Tepi (Blur Blend)</span>
           <span className="font-mono text-amber-400">{layer.blur || 0}px</span>
         </div>
-        <p className="text-[10px] text-zinc-400">
-          Gunakan blur 1-4px agar warna tambalan menyatu mulus dengan kompresi gambar asli.
-        </p>
         <input
           type="range"
           min={0}
-          max={12}
+          max={10}
           value={layer.blur || 0}
           onChange={(e) => onChange({ blur: Number(e.target.value) })}
-          className="accent-amber-500 w-full mt-1"
-        />
-      </div>
-
-      {/* Opacity */}
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between text-[10px] text-zinc-400">
-          <span>Transparansi (Opacity)</span>
-          <span className="font-mono text-amber-400">{Math.round((layer.opacity ?? 1) * 100)}%</span>
-        </div>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={Math.round((layer.opacity ?? 1) * 100)}
-          onChange={(e) => onChange({ opacity: Number(e.target.value) / 100 })}
           className="accent-amber-500 w-full"
         />
       </div>
 
       {/* Layer Position / Ordering */}
       <div className="flex items-center justify-between pt-1">
-        <span className="text-[11px] font-semibold text-zinc-400">Urutan Layer</span>
+        <span className="text-[10px] font-semibold text-zinc-400">Urutan Layer</span>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onSendBackward}
-            className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px]"
+            className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px]"
           >
             Ke Bawah
           </button>
           <button
             onClick={onBringForward}
-            className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px]"
+            className="px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px]"
           >
             Ke Atas
           </button>

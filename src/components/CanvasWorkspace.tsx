@@ -96,7 +96,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    // Reset transform
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -118,7 +117,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     // 3. Draw live brush stroke if actively drawing
     if (isDrawing && currentStrokePoints.length > 1) {
       ctx.save();
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 14;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -152,16 +151,16 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     redraw();
   }, [redraw]);
 
-  // Helper to get canvas coordinate from mouse event
-  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Coordinate mapper from Mouse or Touch
+  const getCanvasCoords = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -172,11 +171,9 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Check selected layer's handles first
     if (selectedLayerId) {
       const selectedLayer = layers.find((l) => l.id === selectedLayerId);
       if (selectedLayer && !selectedLayer.locked && !selectedLayer.hidden) {
-        // Transform point to local layer coordinate
         const rad = -((selectedLayer.rotation || 0) * Math.PI) / 180;
         const dx = x - selectedLayer.x;
         const dy = y - selectedLayer.y;
@@ -188,8 +185,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
         // Rotation handle
         const rotHandleX = bounds.x + bounds.w / 2;
         const rotHandleY = bounds.y - 24;
-        const distRot = Math.hypot(lx - rotHandleX, ly - rotHandleY);
-        if (distRot <= 12) {
+        if (Math.hypot(lx - rotHandleX, ly - rotHandleY) <= 18) {
           return { layer: selectedLayer, handle: 'rotate' };
         }
 
@@ -202,7 +198,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             { h: 'sw', px: bounds.x, py: bounds.y + bounds.h },
           ];
           for (const hand of handles) {
-            if (Math.hypot(lx - hand.px, ly - hand.py) <= 12) {
+            if (Math.hypot(lx - hand.px, ly - hand.py) <= 18) {
               return { layer: selectedLayer, handle: hand.h };
             }
           }
@@ -210,7 +206,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       }
     }
 
-    // Hit test elements from top to bottom
+    // Elements hit test
     for (let i = layers.length - 1; i >= 0; i--) {
       const layer = layers[i];
       if (layer.locked || layer.hidden) continue;
@@ -222,7 +218,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
 
       const bounds = getLayerLocalBounds(ctx, layer);
-      const pad = 8;
+      const pad = 12;
       if (
         lx >= bounds.x - pad &&
         lx <= bounds.x + bounds.w + pad &&
@@ -236,11 +232,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     return null;
   };
 
-  // Mouse Down
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const coords = getCanvasCoords(e);
+  // Pointer Down (Mouse or Touch)
+  const handlePointerDown = (clientX: number, clientY: number) => {
+    const coords = getCanvasCoords(clientX, clientY);
 
-    // Eyedropper mode
     if (toolMode === 'eyedropper') {
       const canvas = canvasRef.current;
       if (canvas) {
@@ -255,14 +250,12 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       return;
     }
 
-    // Brush mode
     if (toolMode === 'brush') {
       setIsDrawing(true);
       setCurrentStrokePoints([coords]);
       return;
     }
 
-    // Select mode
     const hit = hitTest(coords.x, coords.y);
     if (hit) {
       onSelectLayer(hit.layer.id);
@@ -287,11 +280,10 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
-  // Mouse Move
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const coords = getCanvasCoords(e);
+  // Pointer Move (Mouse or Touch)
+  const handlePointerMove = (clientX: number, clientY: number) => {
+    const coords = getCanvasCoords(clientX, clientY);
 
-    // Eyedropper Preview
     if (toolMode === 'eyedropper') {
       const canvas = canvasRef.current;
       if (canvas) {
@@ -304,7 +296,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             1
           ).data;
           setLoupeColor(rgbToHex(p[0], p[1], p[2]));
-          setLoupePos({ x: e.clientX, y: e.clientY });
+          setLoupePos({ x: clientX, y: clientY });
         }
       }
       return;
@@ -312,13 +304,11 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       if (loupePos) setLoupePos(null);
     }
 
-    // Brush Drawing
     if (isDrawing && toolMode === 'brush') {
       setCurrentStrokePoints((prev) => [...prev, coords]);
       return;
     }
 
-    // Layer Dragging
     if (isDragging && selectedLayerId && dragHandle) {
       const activeLayer = layers.find((l) => l.id === selectedLayerId);
       if (!activeLayer) return;
@@ -332,7 +322,6 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           y: Math.round(dragStart.layerY + dy),
         });
       } else if (dragHandle === 'rotate') {
-        // Calculate angle from layer center
         const angleRad = Math.atan2(coords.y - activeLayer.y, coords.x - activeLayer.x);
         let deg = Math.round((angleRad * 180) / Math.PI + 90);
         if (deg > 180) deg -= 360;
@@ -346,14 +335,13 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
     }
   };
 
-  // Mouse Up
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (isDrawing && toolMode === 'brush' && currentStrokePoints.length > 1) {
       const newStroke: BrushStrokeLayer = {
         id: `brush-${Date.now()}`,
         type: 'brush_stroke',
         points: currentStrokePoints,
-        color: '#ffffff',
+        color: '#f59e0b',
         size: 14,
         x: 0,
         y: 0,
@@ -384,7 +372,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
       ref={containerRef}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
-      className="flex-1 bg-zinc-950 canvas-checkerboard relative overflow-auto flex items-center justify-center p-6 select-none"
+      className="flex-1 bg-zinc-950 canvas-checkerboard relative overflow-auto flex items-center justify-center p-3 md:p-6 pb-20 md:pb-6 select-none"
       style={{
         cursor:
           toolMode === 'eyedropper'
@@ -406,7 +394,7 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
             className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
             style={{ backgroundColor: loupeColor }}
           />
-          <span className="bg-black/90 text-white font-mono text-[11px] px-2 py-0.5 rounded shadow">
+          <span className="bg-black text-white font-mono text-[11px] px-2 py-0.5 rounded shadow border border-zinc-700">
             {loupeColor}
           </span>
         </div>
@@ -424,11 +412,24 @@ export const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({
           ref={canvasRef}
           width={canvasWidth}
           height={canvasHeight}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          className="block bg-white shadow-2xl"
+          // Mouse events
+          onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
+          onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          // Touch events for mobile phones
+          onTouchStart={(e) => {
+            if (e.touches.length === 1) {
+              handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (e.touches.length === 1) {
+              handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+          }}
+          onTouchEnd={handlePointerUp}
+          className="block bg-zinc-900 shadow-2xl touch-none"
         />
       </div>
     </div>

@@ -30,26 +30,53 @@ export const App: React.FC = () => {
   const [currentTemplate, setCurrentTemplate] = useState<MemeTemplate>(MEME_TEMPLATES[0]);
   const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
 
-  // Canvas Dimensions
-  const [canvasWidth, setCanvasWidth] = useState<number>(1280);
-  const [canvasHeight, setCanvasHeight] = useState<number>(720);
+  // Canvas Dimensions for Ivan Gunawan meme (736 x 731)
+  const [canvasWidth, setCanvasWidth] = useState<number>(736);
+  const [canvasHeight, setCanvasHeight] = useState<number>(731);
 
-  // Layers & Selection
-  const [layers, setLayers] = useState<EditorLayer[]>(() => {
-    return (MEME_TEMPLATES[0].initialLayers as EditorLayer[]) || [];
-  });
+  // Layers & Selection (Foto asli murni tanpa ditimpa awal)
+  const [layers, setLayers] = useState<EditorLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   // Undo / Redo History
-  const [history, setHistory] = useState<EditorLayer[][]>([
-    (MEME_TEMPLATES[0].initialLayers as EditorLayer[]) || [],
-  ]);
+  const [history, setHistory] = useState<EditorLayer[][]>([[]]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
+
+  // Compute responsive zoom for mobile screens
+  const getResponsiveZoom = (w: number = 736) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return Math.min(0.9, Math.max(0.24, (window.innerWidth - 24) / w));
+    }
+    return 0.85;
+  };
 
   // Active Tool Mode
   const [toolMode, setToolMode] = useState<ToolMode>('select');
   const [currentFilter, setCurrentFilter] = useState<'none' | 'meme_boost' | 'deep_fried' | 'photocopy' | 'vintage'>('none');
-  const [zoom, setZoom] = useState<number>(0.85);
+  const [zoom, setZoom] = useState<number>(() => getResponsiveZoom(736));
+
+  // Mount hook to automatically load the real Ivan Gunawan meme on home page
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      setUploadedImage(img);
+      setCanvasWidth(img.width);
+      setCanvasHeight(img.height);
+      setZoom(getResponsiveZoom(img.width));
+    };
+    img.src = '/assets/aistudio/image_232299d1.png';
+  }, []);
+
+  // Resize listener to adapt zoom
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setZoom(getResponsiveZoom(canvasWidth));
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [canvasWidth]);
 
   // Modals
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -102,16 +129,16 @@ export const App: React.FC = () => {
       strokeColor: '#000000',
       strokeWidth: 4,
       backgroundColor: '',
-      backgroundPadding: 6,
-      backgroundBorderRadius: 4,
+      backgroundPadding: 0,
+      backgroundBorderRadius: 0,
       align: 'center',
       bold: true,
       italic: false,
       uppercase: true,
-      shadowColor: 'rgba(0,0,0,0.7)',
-      shadowBlur: 6,
-      shadowOffsetX: 2,
-      shadowOffsetY: 2,
+      shadowColor: '',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
     };
     const updated = [...layers, newText];
     setLayers(updated);
@@ -255,23 +282,34 @@ export const App: React.FC = () => {
   // Template switch
   const handleSelectTemplate = (template: MemeTemplate) => {
     setCurrentTemplate(template);
-    setUploadedImage(null);
 
-    // Aspect ratio canvas size
-    let w = 1280;
-    let h = 720;
-    if (template.aspectRatio === '1:1') {
-      w = 1000;
-      h = 1000;
-    } else if (template.aspectRatio === '9:16') {
-      w = 720;
-      h = 1280;
-    } else if (template.aspectRatio === '4:3') {
-      w = 1000;
-      h = 750;
+    if (template.imageSrc) {
+      const img = new Image();
+      img.onload = () => {
+        setUploadedImage(img);
+        setCanvasWidth(img.width);
+        setCanvasHeight(img.height);
+        setZoom(getResponsiveZoom(img.width));
+      };
+      img.src = template.imageSrc;
+    } else {
+      setUploadedImage(null);
+      let w = 1280;
+      let h = 720;
+      if (template.aspectRatio === '1:1') {
+        w = 1000;
+        h = 1000;
+      } else if (template.aspectRatio === '9:16') {
+        w = 720;
+        h = 1280;
+      } else if (template.aspectRatio === '4:3') {
+        w = 1000;
+        h = 750;
+      }
+      setCanvasWidth(w);
+      setCanvasHeight(h);
+      setZoom(getResponsiveZoom(w));
     }
-    setCanvasWidth(w);
-    setCanvasHeight(h);
 
     const initial = (template.initialLayers as EditorLayer[]) || [];
     setLayers(initial);
@@ -483,7 +521,7 @@ export const App: React.FC = () => {
             zoom={zoom}
             onZoomIn={() => setZoom((z) => Math.min(2.5, z + 0.15))}
             onZoomOut={() => setZoom((z) => Math.max(0.2, z - 0.15))}
-            onResetZoom={() => setZoom(0.85)}
+            onResetZoom={() => setZoom(getResponsiveZoom())}
             onOpenLab={() => setAppMode('lab')}
           />
 
@@ -517,6 +555,7 @@ export const App: React.FC = () => {
               onBringForward={() => handleMoveLayerUp(activeLayer.id)}
               onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
               onTriggerEyedropper={handleTriggerEyedropper}
+              onClose={() => setSelectedLayerId(null)}
             />
           )}
 
@@ -529,6 +568,7 @@ export const App: React.FC = () => {
               onBringForward={() => handleMoveLayerUp(activeLayer.id)}
               onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
               onTriggerEyedropper={handleTriggerEyedropper}
+              onClose={() => setSelectedLayerId(null)}
             />
           )}
 
@@ -540,6 +580,7 @@ export const App: React.FC = () => {
               onDuplicate={() => handleDuplicateLayer(activeLayer.id)}
               onBringForward={() => handleMoveLayerUp(activeLayer.id)}
               onSendBackward={() => handleMoveLayerDown(activeLayer.id)}
+              onClose={() => setSelectedLayerId(null)}
             />
           )}
         </div>
